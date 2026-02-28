@@ -1,12 +1,9 @@
-# Streamlit dashboard
 streamlit==1.26.0
-
-# Data manipulation
 pandas==2.0.3
-numpy==1.26.5
-
-# Visualization
+numpy==1.25.2
 plotly==6.1.0
-
-# Optional: risk metrics, etc.
 scipy==1.11.1
+rich==14.3.3
+markdown-it-py==4.0.0
+mdurl==0.1.2
+pygments==2.19.2
