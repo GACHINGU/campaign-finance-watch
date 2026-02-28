@@ -1,4 +1,12 @@
+# Streamlit dashboard
 streamlit==1.26.0
+
+# Data manipulation
 pandas==2.0.3
-plotly==6.1.0
 numpy==1.26.5
+
+# Visualization
+plotly==6.1.0
+
+# Optional: risk metrics, etc.
+scipy==1.11.1
