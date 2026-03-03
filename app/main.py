@@ -5,12 +5,52 @@ from utils.data_loader import load_data
 from utils.risk_engine import calculate_hhi, detect_spike, classify_risk
 
 # -------------------------
+# NEW: DATA UPLOADER FUNCTION
+# -------------------------
+
+def load_custom_data():
+    """Handles user file uploads for CSV, XLSX, and JSON."""
+    st.sidebar.header("Upload Campaign Data")
+    uploaded_file = st.sidebar.file_uploader(
+        "Choose a file", 
+        type=["csv", "xlsx", "json"],
+        help="Upload a file with columns: party, region, date, amount, donor"
+    )
+
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            elif uploaded_file.name.endswith('.xlsx'):
+                df = pd.read_excel(uploaded_file)
+            elif uploaded_file.name.endswith('.json'):
+                df = pd.read_json(uploaded_file)
+            
+            # Ensure date column is datetime objects
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+            
+            return df
+        except Exception as e:
+            st.error(f"Error loading file: {e}")
+            return None
+    
+    # Fallback to default data if no file is uploaded
+    return load_data()
+
+# -------------------------
 # UI & NAVIGATION FUNCTIONS
 # -------------------------
 
 def apply_sidebar_filters(df):
-    st.sidebar.header(" Data Filters")
+    st.sidebar.header("Data Filters")
     
+    # Check if required columns exist to avoid crashes with custom uploads
+    required_cols = ["party", "region", "date", "donor"]
+    if not all(col in df.columns for col in required_cols):
+        st.sidebar.warning("Uploaded file is missing required columns.")
+        return df
+
     selected_party = st.sidebar.multiselect("Select Party", options=df["party"].unique(), default=df["party"].unique())
     selected_region = st.sidebar.multiselect("Select Region", options=df["region"].unique(), default=df["region"].unique())
 
@@ -32,7 +72,6 @@ def apply_sidebar_filters(df):
     return df.loc[mask]
 
 def run_alerts(hhi, z_score):
-    """Triggers sidebar alerts based on risk thresholds."""
     if hhi > 0.6:
         st.sidebar.error("🚨 ALERT: High Donor Concentration detected!")
     if z_score > 3:
@@ -78,7 +117,6 @@ def render_risk_intelligence(df):
     elif risk_level == "Medium": r_col3.warning(f"Risk Level: {risk_level}")
     else: r_col3.success(f"Risk Level: {risk_level}")
 
-    # --- RE-ADDED: RISK REPORT SECTION ---
     with st.expander("📝 Generate & Download Risk Report"):
         summary_text = f"""Campaign Risk Assessment Report
 -------------------------------
@@ -92,12 +130,7 @@ Z-score above 2 suggests abnormal spending spikes.
 Generated on: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
 """
         st.text(summary_text)
-        st.download_button(
-            label="Download Risk Report (.txt)",
-            data=summary_text,
-            file_name="campaign_risk_report.txt",
-            mime="text/plain"
-        )
+        st.download_button("Download Risk Report (.txt)", data=summary_text, file_name="campaign_risk_report.txt")
 
     st.divider()
     st.subheader("Party-level Risk Indicators")
@@ -120,27 +153,31 @@ def render_data_explorer(df):
 def main():
     st.set_page_config(page_title="Finance Watch", layout="wide", page_icon="🗳️")
 
-    df = load_data()
+    # Use the new custom loader
+    df = load_custom_data()
 
-    # Sidebar Navigation
-    st.sidebar.title("🗳️ Finance Watch")
-    page = st.sidebar.radio("Navigation", ["Dashboard Overview", "Risk Intelligence", "Data Explorer"])
-    st.sidebar.markdown("---")
+    if df is not None:
+        # Sidebar Navigation
+        st.sidebar.title("🗳️ Finance Watch")
+        page = st.sidebar.radio("Navigation", ["Dashboard Overview", "Risk Intelligence", "Data Explorer"])
+        st.sidebar.markdown("---")
 
-    # Filter Logic
-    filtered_df = apply_sidebar_filters(df)
+        # Filter Logic
+        filtered_df = apply_sidebar_filters(df)
 
-    # Alerts Logic
-    if not filtered_df.empty:
-        run_alerts(calculate_hhi(filtered_df), detect_spike(filtered_df))
+        # Alerts Logic
+        if not filtered_df.empty:
+            run_alerts(calculate_hhi(filtered_df), detect_spike(filtered_df))
 
-    # Page Routing
-    if filtered_df.empty:
-        st.error("No data found for selected filters.")
+        # Page Routing
+        if filtered_df.empty:
+            st.error("No data found for selected filters.")
+        else:
+            if page == "Dashboard Overview": render_dashboard_overview(filtered_df)
+            elif page == "Risk Intelligence": render_risk_intelligence(filtered_df)
+            elif page == "Data Explorer": render_data_explorer(filtered_df)
     else:
-        if page == "Dashboard Overview": render_dashboard_overview(filtered_df)
-        elif page == "Risk Intelligence": render_risk_intelligence(filtered_df)
-        elif page == "Data Explorer": render_data_explorer(filtered_df)
+        st.info("Please upload a file in the sidebar to begin analysis.")
 
 if __name__ == "__main__":
     main()
