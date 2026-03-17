@@ -4,6 +4,7 @@ import pandas as pd
 # -------------------------
 # 1️⃣ Herfindahl-Hirschman Index (HHI)
 # -------------------------
+# Checks Donor funding concentration. HHI > 0.25 indicates high concentration risk.
 def calculate_hhi(df):
     donor_totals = df.groupby("donor")["amount"].sum()
     total = donor_totals.sum()
@@ -19,6 +20,7 @@ def calculate_hhi(df):
 # -------------------------
 # 2️⃣ Spending Spike Detection (Z-score)
 # -------------------------
+# Detects sudden spikes in daily spending. Z-score > 2 indicates a significant spike.
 def detect_spike(df):
     daily_spending = df.groupby("date")["amount"].sum()
     
@@ -40,6 +42,7 @@ def detect_spike(df):
 # -------------------------
 # 3️⃣ Risk Classification
 # -------------------------
+# Combines HHI and Z-score to classify overall risk level: Low, Medium, High.
 def classify_risk(hhi, z_score):
     risk_score = 0
     
